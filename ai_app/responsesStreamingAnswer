@@ -1,0 +1,81 @@
+User > 안녕
+ResponseCreatedEvent(
+    response=Response(
+        id='resp_67f3802415ec8191b3f7531923e4b3090dd90a6a31cbedd3',
+        created_at=1744011300.0,
+        error=None,
+        incomplete_details=None,
+        instructions=None,
+        metadata={},
+        model='o3-mini-2025-01-31',
+        object='response',
+        output=[],
+        parallel_tool_calls=True,
+        temperature=1.0,
+        tool_choice='auto',
+        tools=[],
+                 top_p=1.0,
+                  max_output_tokens=None,
+                   previous_response_id=None,
+                    reasoning=Reasoning(effort='medium', generate_summary=None),
+                     status='in_progress',
+                      text=ResponseTextConfig(format=ResponseFormatText(type='text')),
+                       truncation='disabled',
+                        usage=None,
+                         user=None,
+                          store=True), type='response.created')
+ResponseInProgressEvent(response=Response(id='resp_67f3802415ec8191b3f7531923e4b3090dd90a6a31cbedd3', created_at=1744011300.0, error=None, incomplete_details=None, instructions=None, metadata={}, model='o3-mini-2025-01-31', object='response', output=[], parallel_tool_calls=True, temperature=1.0, tool_choice='auto', tools=[], top_p=1.0, max_output_tokens=None, previous_response_id=None, reasoning=Reasoning(effort='medium', generate_summary=None), status='in_progress', text=ResponseTextConfig(format=ResponseFormatText(type='text')), truncation='disabled', usage=None, user=None, store=True), type='response.in_progress')
+ResponseOutputItemAddedEvent(item=ResponseReasoningItem(id='rs_67f3802677c4819193dc218345e5495f0dd90a6a31cbedd3', summary=[], type='reasoning', status=None), output_index=0, type='response.output_item.added')
+ResponseOutputItemDoneEvent(item=ResponseReasoningItem(id='rs_67f3802677c4819193dc218345e5495f0dd90a6a31cbedd3', summary=[], type='reasoning', status=None), output_index=0, type='response.output_item.done')
+ResponseOutputItemAddedEvent(item=ResponseOutputMessage(id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', content=[], role='assistant', status='in_progress', type='message'), output_index=1, type='response.output_item.added')
+ResponseContentPartAddedEvent(content_index=0, item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, part=ResponseOutputText(annotations=[], text='', type='output_text'), type='response.content_part.added')
+
+
+
+
+
+
+ResponseTextDeltaEvent(content_index=0, delta='안', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta='녕하세요', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')      
+ResponseTextDeltaEvent(content_index=0, delta='!', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta=' 반', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta='가', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta='워', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta='요', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta='.', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta=' 저는', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta=' 여러분', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta='의', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta=' 글', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta='쓰기', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta=' 프로젝트', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')     
+ResponseTextDeltaEvent(content_index=0, delta='를', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta=' 탐', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta='구', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta='하고', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta=' 방향', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta='을', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta=' 잡', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta='을', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta=' 수', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta=' 있도록', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')       
+ResponseTextDeltaEvent(content_index=0, delta=' 돕', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta='는', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta=' 역할', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta='을', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta=' 하고', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta=' 있어', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta='요', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta='.', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta=' 언제', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta='든', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta=' 편', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta='하게', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta=' 이야기', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta='해', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDeltaEvent(content_index=0, delta=' 주세요', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')       
+ResponseTextDeltaEvent(content_index=0, delta='.', item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, type='response.output_text.delta')
+ResponseTextDoneEvent(content_index=0, item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, text='안녕하세요! 반가워요. 저는 여러분의 글쓰기 프로젝트를 탐구하고 방향을 잡을 수 있도록 돕는 역할을 하고 있어요. 언제든 편하게 이야기해 주세요.', type='response.output_text.done')
+ResponseContentPartDoneEvent(content_index=0, item_id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', output_index=1, part=ResponseOutputText(annotations=[], text='안녕하세요! 반가워요. 저는 여러분의 글쓰기 프로젝트를 탐구하고 방향을 잡을 수 있도록 돕는 역할을 하고 있어요. 언제든 편하게 이야기해 주세요.', type='output_text'), type='response.content_part.done')
+ResponseOutputItemDoneEvent(item=ResponseOutputMessage(id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', content=[ResponseOutputText(annotations=[], text='안녕하세요! 반가워요. 저는 여러분의 글쓰기 프로젝트를 탐구하고 방향을 잡을 수 있도록 돕는 역할을 하고 있어요. 언제든 편하게 이야기해 주세요.', type='output_text')], role='assistant', status='completed', type='message'), output_index=1, type='response.output_item.done')
+ResponseCompletedEvent(response=Response(id='resp_67f3802415ec8191b3f7531923e4b3090dd90a6a31cbedd3', created_at=1744011300.0, error=None, incomplete_details=None, instructions=None, metadata={}, model='o3-mini-2025-01-31', object='response', output=[ResponseReasoningItem(id='rs_67f3802677c4819193dc218345e5495f0dd90a6a31cbedd3', summary=[], type='reasoning', status=None), ResponseOutputMessage(id='msg_67f38026cc7c8191b400ed9f95835f740dd90a6a31cbedd3', content=[ResponseOutputText(annotations=[], text='안녕하세요! 반가워요. 저는 여러분의 글쓰기 프로젝트를 탐구하고 방향을 잡을 수 있도록 돕는 역할을 하고 있어요. 언제든 편하게 이야기해 주세요.', type='output_text')], role='assistant', status='completed', type='message')], parallel_tool_calls=True, temperature=1.0, tool_choice='auto', tools=[], top_p=1.0, max_output_tokens=None, previous_response_id=None, reasoning=Reasoning(effort='medium', generate_summary=None), status='completed', text=ResponseTextConfig(format=ResponseFormatText(type='text')), truncation='disabled', usage=ResponseUsage(input_tokens=1083, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=298, output_tokens_details=OutputTokensDetails(reasoning_tokens=256), total_tokens=1381), user=None, store=True), type='response.completed')
