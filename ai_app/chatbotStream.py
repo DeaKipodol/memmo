@@ -44,6 +44,16 @@ class ChatbotStream:
         self.assistantname=kwargs["assistant"]
        # self.memoryManager = MemoryManager()
         self.writingRequirementsManager=WritingRequirementsManager()
+        self.field_instructions = {
+            "purpose_background": "글을 쓰는 이유와 배경을 명확히 정리하세요.",
+            "context_topic": "글의 주제나 상황을 중심으로 정리하세요.",
+            "audience_scope": "대상 독자의 특성과 목적에 맞게 정리하세요.",
+            "format_structure": "글의 구조나 형식을 논리적 순서로 정리하세요.",
+            "logic_evidence": "논리 전개나 근거, 자료가 잘 드러나도록 정리하세요.",
+            "expression_method": "문체, 어조, 시점 등을 일관되게 정리하세요.",
+            "additional_constraints": "키워드, 금지어, 조건 등의 제약사항을 명확히 정리하세요.",
+            "output_expectations": "결과물 형태나 완성 기준을 구체적으로 정리하세요."
+        }
        
     def add_user_message_in_context(self, message: str):
         """

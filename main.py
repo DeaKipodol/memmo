@@ -57,14 +57,21 @@ func_calling = FunctionCalling(model=model.basic)
 
 @app.post("/stream-chat")
 async def stream_chat(user_input: UserRequest):
-    # 1) 사용자 메시지를 우선 원본 문맥에 추가
+   # 1) 사용자 메시지를 원본 문맥에 그대로 추가
     chatbot.add_user_message_in_context(user_input.message)
-    
-    chatbot.context[-1]['content'] += chatbot.instruction
+    # 2) 현재 대화방 문맥 가져오기 및 API 형식 변환
+    current_context = chatbot.get_current_context()
+    temp_context = chatbot.to_openai_context(current_context).copy()
+    # 3) 복제된 문맥에 지침 추가
+    if chatbot.current_field != "main":
+        instruction = chatbot.field_instructions.get(chatbot.current_field, chatbot.instruction)
+        # 마지막 사용자 메시지에 지침 추가
+        for msg in reversed(temp_context):
+            if msg["role"] == "user":
+                msg["content"] = f"{msg['content']}\ninstruction: {instruction}"
+                break
 
     analyzed= func_calling.analyze(user_input.message, tools)
-
-    temp_context = chatbot.to_openai_context().copy()
     
 
     for tool_call in analyzed:  # analyzed는 list of function_call dicts
@@ -90,7 +97,7 @@ async def stream_chat(user_input: UserRequest):
                 print(f"함수 호출 메시지: {function_call_msg}")
                 if func_name == "search_internet":
                     # context는 이미 run 메서드의 매개변수로 받고 있음
-                   func_response = func_to_call(chat_context=chatbot.context[:], **func_args)
+                   func_response = func_to_call(chat_context=current_context[:], **func_args)
                 else:
                    func_response = func_to_call(**func_args)
 
@@ -163,7 +170,8 @@ async def stream_chat(user_input: UserRequest):
                                             completed_text= part.text
                             case "response.completed":
                                 yield "\n"
-                                #print(f"\n📦 최종 전체 출력: \n{completed_text}")
+                                chatbot.add_response_stream(completed_text)
+                                print(f"\n📦 스트림 완료 출력: \n{completed_text}")
                             case "response.failed":
                                 print("❌ 응답 생성 실패")
                                 yield "❌ 응답 생성 실패"
@@ -175,17 +183,89 @@ async def stream_chat(user_input: UserRequest):
                                 yield f"[📬 기타 이벤트 감지: {event.type}]"
         except Exception as e:
             yield f"\nStream Error: {str(e)}"
-        finally:
-            # 스트리밍이 끝나면 최종 응답을 원본 문맥에만 반영하고 임시문맥은 사용하지 않음
-                            # 기존 clean 방식 유지
-            chatbot.add_response_stream( completed_text)
             
-                        # 최종 응답을 원본 문맥에 저장
-    # 5) 함수 호출이 있을 때는 위의 generate_with_tool()를 사용
+
     return StreamingResponse(generate_with_tool(), media_type="text/plain")
 
+@app.post("/enter-sub-conversation/{field_name}")
+async def enter_sub_conversation(field_name: str):
+    valid_fields = [
+        "purpose_background", "context_topic", "audience_scope", "format_structure",
+        "logic_evidence", "expression_method", "additional_constraints", "output_expectations"
+    ]
+    if field_name not in valid_fields:
+        raise HTTPException(status_code=400, detail="유효하지 않은 서브 대화방입니다.")
+    message = chatbot.enter_sub_conversation(field_name)
+    return {"message": message}
+@app.post("/exit-conversation")
+async def exit_conversation():
+    message = chatbot.exit_sub_conversation()
+    return {"message": message}
 
 
 
+@app.get("/current-conversation")
+async def get_current_conversation():
+    """
+    현재 대화방 상태를 반환합니다.
+    
+    Returns:
+        dict: 현재 대화방 이름과 상태 메시지를 포함한 JSON 응답.
+    """
+    current_field = chatbot.current_field
+    if current_field == "main":
+        message = "현재 메인 대화방에 있습니다."
+    else:
+        message = f"현재 {current_field} 서브 대화방에 있습니다."
+    
+    return {
+        "success": True,
+        "current_field": current_field,
+        "message": message
+    }
 
+@app.get("/conversation-history/{field_name}")
+async def get_conversation_history(field_name: str):
+    """
+    지정된 대화방의 대화 기록을 반환합니다.
+    
+    Args:
+        field_name (str): 대화방 이름 (main 또는 서브 대화방).
+    
+    Returns:
+        dict: 대화 기록과 상태 메시지를 포함한 JSON 응답.
+    """
+    valid_fields = [
+        "main", "purpose_background", "context_topic", "audience_scope", "format_structure",
+        "logic_evidence", "expression_method", "additional_constraints", "output_expectations"
+    ]
+    if field_name not in valid_fields:
+        raise HTTPException(status_code=400, detail="유효하지 않은 대화방입니다.")
+    
+    if field_name == "main":
+        history = chatbot.context
+    else:
+        history = chatbot.sub_contexts.get(field_name, {}).get("messages", [])
+    
+    return {
+        "success": True,
+        "field_name": field_name,
+        "history": history,
+        "message": f"{field_name} 대화방의 기록을 반환했습니다."
+    }
 
+@app.post("/reset-conversation")
+async def reset_conversation():
+    """
+    대화 상태를 초기화합니다.
+    
+    Returns:
+        dict: 초기화 성공 메시지를 포함한 JSON 응답.
+    """
+    chatbot.context = [{"role": "system", "content": system_role}]  # 메인 문맥 초기화
+    chatbot.sub_contexts = {}  # 서브 문맥 초기화
+    chatbot.current_field = "main"  # 대화방 상태 초기화
+    return {
+        "success": True,
+        "message": "대화 상태가 초기화되었습니다."
+    }
