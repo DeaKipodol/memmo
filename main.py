@@ -10,7 +10,7 @@ import asyncio
 from ai_app.assist.characters import instruction,system_role
 from ai_app.utils.function_calling import FunctionCalling, tools # 단일 함수 호출
 from contextlib import asynccontextmanager
-
+'''
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 시작 시에는 별다른 동작 없이 바로 yield
@@ -18,10 +18,11 @@ async def lifespan(app: FastAPI):
     # 종료 시 실행할 코드
     print("FastAPI shutting down...")
     chatbot.save_chat()
-    print("Saved!")
+    print("Saved!")'''
 
-
-app = FastAPI(lifespan=lifespan)
+#app = FastAPI(lifespan)
+#a몽고디비 저장 비활성화 주석석
+app = FastAPI()
 '''chatbot = Chatbot(
     model=model.basic,
     system_role = system_role,
@@ -31,7 +32,7 @@ app = FastAPI(lifespan=lifespan)
     )  # 모델 초기화'''
 
 chatbot=ChatbotStream(
-    model=model.basic,
+    model=model.advanced,
     system_role = system_role,
     instruction=instruction,
     user= "대기",
@@ -57,6 +58,16 @@ func_calling = FunctionCalling(model=model.basic)
 
 @app.post("/stream-chat")
 async def stream_chat(user_input: UserRequest):
+    """
+    사용자 메시지를 처리하여 챗봇과 대화한다.
+    현재 방에 문맥에 따라 문맥을 교체 하며 대화.
+    
+    Args:
+        user_input (UserRequest): 사용자가 입력한 메시지.
+    
+    Returns:
+        StreamingResponse: GPT 스트리밍 응답 또는 요약/제목 JSON.
+    """
    # 1) 사용자 메시지를 원본 문맥에 그대로 추가
     chatbot.add_user_message_in_context(user_input.message)
     # 2) 현재 대화방 문맥 가져오기 및 API 형식 변환
@@ -189,6 +200,15 @@ async def stream_chat(user_input: UserRequest):
 
 @app.post("/enter-sub-conversation/{field_name}")
 async def enter_sub_conversation(field_name: str):
+    """
+    지정된 서브 대화방으로 전환.
+    
+    Args:
+        field_name (str): 전환할 서브 대화방 이름.
+    
+    Returns:
+        dict: 전환 성공 메시지.
+    """
     valid_fields = [
         "purpose_background", "context_topic", "audience_scope", "format_structure",
         "logic_evidence", "expression_method", "additional_constraints", "output_expectations"
@@ -199,6 +219,12 @@ async def enter_sub_conversation(field_name: str):
     return {"message": message}
 @app.post("/exit-conversation")
 async def exit_conversation():
+    """
+    현재 서브 대화방을 종료하고 메인 대화방으로 복귀
+    
+    Returns:
+        dict: 종료 메시지.
+    """
     message = chatbot.exit_sub_conversation()
     return {"message": message}
 
@@ -207,7 +233,7 @@ async def exit_conversation():
 @app.get("/current-conversation")
 async def get_current_conversation():
     """
-    현재 대화방 상태를 반환합니다.
+    현재 대화방 상태를 반환.
     
     Returns:
         dict: 현재 대화방 이름과 상태 메시지를 포함한 JSON 응답.
@@ -268,4 +294,76 @@ async def reset_conversation():
     return {
         "success": True,
         "message": "대화 상태가 초기화되었습니다."
+    }
+@app.get("/field-content/{field_name}")
+async def get_field_content(field_name: str):
+    """
+    지정된 필드의 내용을 반환합니다.
+    
+    Args:
+        field_name (str): 조회할 필드 이름.
+    
+    Returns:
+        dict: 필드 내용과 상태 메시지를 포함한 JSON 응답.
+    """
+    valid_fields = [
+        "purpose_background", "context_topic", "audience_scope", "format_structure",
+        "logic_evidence", "expression_method", "additional_constraints", "output_expectations"
+    ]
+    if field_name not in valid_fields:
+        raise HTTPException(status_code=400, detail="유효하지 않은 필드입니다.")
+    
+    content = chatbot.writingRequirementsManager.get_field_content(field_name)
+    return {
+        "success": True,
+        "field_name": field_name,
+        "content": content,
+        "message": f"{field_name} 필드의 내용을 반환했습니다."
+    }
+class UpdateFieldRequest(BaseModel):
+    field_name: str
+    content: str
+@app.post("/update-field")
+async def update_field(request: UpdateFieldRequest):
+    """
+    지정된 필드의 내용을 업데이트하고, 요약 및 clarification_question을 생성합니다.
+    
+    Args:
+        request (UpdateFieldRequest): 필드 이름과 새로운 내용.
+    
+    Returns:
+        dict: 업데이트 결과, 요약, clarification_question을 포함한 JSON 응답.
+    """
+    valid_fields = [
+        "purpose_background", "context_topic", "audience_scope", "format_structure",
+        "logic_evidence", "expression_method", "additional_constraints", "output_expectations"
+    ]
+    if request.field_name not in valid_fields:
+        raise HTTPException(status_code=400, detail="유효하지 않은 필드입니다.")
+    
+    # 필드 업데이트
+    update_message = chatbot.writingRequirementsManager.update_field(request.field_name, request.content)
+    
+    # Clarification Question 생성
+    try:
+        response = client.responses.create(
+            model=chatbot.model,
+            input=[{
+                "role": "user",
+                "content": f"다음 필드 내용에 기반하여 관련된 질문을 생성하세요:\n{request.content}"
+            }],
+        )
+        question = response.output_text
+        if request.field_name in chatbot.sub_contexts:
+            chatbot.sub_contexts[request.field_name]["clarification_question"] = question
+    except Exception as e:
+        question = ""
+        print(f"Clarification question 생성 오류: {e}")
+    
+    return {
+        "success": True,
+        "field_name": request.field_name,
+        "content": chatbot.writingRequirementsManager.get_field_content(request.field_name),
+        "clarification_question": question,
+        "message": update_message
     }

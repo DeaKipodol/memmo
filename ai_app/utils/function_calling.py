@@ -350,7 +350,7 @@ tools = [
             "type":"function",
             
                 "name": "get_writing_requirement_field_content",
-                "description": """사용자가 작성 요구 사항 필드의 내용을 보길 원하면, 사용자가 보고 싶어하는 필드를 확인하세요 (하나 또는 여러 필드를 선택할 수 있습니다. 표시할 필드가 없으면 모든 필드를 표시하기로 결정하세요). 현재 작성된 작성 요구 사항 필드의 내용을 보여주세요..""",
+                "description": """사용자가 작성 요구 사항 필드의 내용을 보길 원하면, 사용자가 보고 싶어하는 필드를 확인하세요 (하나 또는 모든필드를 보여줍니다 모든 필드는None을 반환하세요요.""",
                 "strict": True,
                 "parameters": {
                     "type": "object",
