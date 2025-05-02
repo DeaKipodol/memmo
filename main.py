@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI):
     print("Saved!")'''
 
 #app = FastAPI(lifespan)
-#a몽고디비 저장 비활성화 주석석
+#몽고디비 저장 비활성화 주석
 app = FastAPI()
 '''chatbot = Chatbot(
     model=model.basic,
@@ -217,6 +217,7 @@ async def enter_sub_conversation(field_name: str):
         raise HTTPException(status_code=400, detail="유효하지 않은 서브 대화방입니다.")
     message = chatbot.enter_sub_conversation(field_name)
     return {"message": message}
+
 @app.post("/exit-conversation")
 async def exit_conversation():
     """
