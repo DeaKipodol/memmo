@@ -19,7 +19,7 @@ class EmbeddingModel:
     
 model = Model()
 embedding_model = EmbeddingModel()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), timeout=30, max_retries=1)
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), max_retries=1)
 
 def makeup_response(message, finish_reason="ERROR"):
     '''api 응답형식으로 반환해서
