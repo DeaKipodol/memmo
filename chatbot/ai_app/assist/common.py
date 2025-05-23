@@ -2,6 +2,10 @@ import os
 from openai import OpenAI
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # pytz는 특정한 데이터베이스로부터 timezone 정의를 불러옵니다. 예를 들어, 서울 시간은 utc보다 9시간 빠르다는 정보
 import pytz
 @dataclass(frozen=True)
@@ -19,7 +23,7 @@ class EmbeddingModel:
     
 model = Model()
 embedding_model = EmbeddingModel()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), timeout=30, max_retries=1)
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), max_retries=1)
 
 def makeup_response(message, finish_reason="ERROR"):
     '''api 응답형식으로 반환해서

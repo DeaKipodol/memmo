@@ -10,6 +10,7 @@ import asyncio
 from ai_app.assist.characters import instruction,system_role
 from ai_app.utils.function_calling import FunctionCalling, tools # 단일 함수 호출
 from contextlib import asynccontextmanager
+from ai_app.utils.auto_summary import router as memory_router # 추가
 '''
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -23,6 +24,7 @@ async def lifespan(app: FastAPI):
 #app = FastAPI(lifespan)
 #몽고디비 저장 비활성화 주석
 app = FastAPI()
+app.include_router(memory_router) #추가
 '''chatbot = Chatbot(
     model=model.basic,
     system_role = system_role,
@@ -57,7 +59,7 @@ func_calling = FunctionCalling(model=model.basic)
 
 
 @app.post("/stream-chat")
-async def stream_chat(user_input: UserRequest):
+async def stream_chat(user_input: UserRequest, request: Request):
     """
     사용자 메시지를 처리하여 챗봇과 대화한다.
     현재 방에 문맥에 따라 문맥을 교체 하며 대화.
@@ -70,9 +72,24 @@ async def stream_chat(user_input: UserRequest):
     """
    # 1) 사용자 메시지를 원본 문맥에 그대로 추가
     chatbot.add_user_message_in_context(user_input.message)
+    # 1-1) MongoDB에 저장
+    chatbot.save_chat()
     # 2) 현재 대화방 문맥 가져오기 및 API 형식 변환
     current_context = chatbot.get_current_context()
     temp_context = chatbot.to_openai_context(current_context).copy()
+    # ✅ [② AutoSummary fallback 판단 및 실행] ← 📍이 지점에 추가합니다!
+    from ai_app.utils.auto_summary import get_auto_summary
+    auto_summary = get_auto_summary()
+
+    memory_response = auto_summary.answer_with_memory_check(user_input.message, temp_context)
+    if memory_response is None:
+         print("[main.py] GPT가 인터넷 검색 질문으로 판단 → function_call 흐름으로 계속 진행")
+    # 여기선 아무것도 안 하고 아래 function_call 흐름으로 계속 감
+    else:
+        # memory_search 또는 fallback 조건으로 회상 응답이 생성됨
+        chatbot.add_response_stream(memory_response[0]) # , role="assistant" 삭제함 05-21
+        return {"response": memory_response[0]}  # ❗ 이 시점에서 return 하므로 아래로 안 내려감
+    
     # 3) 복제된 문맥에 지침 추가
     if chatbot.current_field != "main":
         instruction = chatbot.field_instructions.get(chatbot.current_field, chatbot.instruction)
@@ -126,7 +143,7 @@ async def stream_chat(user_input: UserRequest):
                 print(f"[함수 실행 오류] {func_name}: {e}")
 
     # 4) 함수 호출 결과가 반영된 temp_context으로 스트리밍 응답을 생성
-    async def generate_with_tool():
+    async def generate_with_tool(request: Request):
         try:
             # stream=True로 스트리밍 응답
             stream = client.responses.create(
@@ -143,6 +160,9 @@ async def stream_chat(user_input: UserRequest):
               
             loading = True
             for event in stream:
+                        if await request.is_disconnected():
+                            print("[디버깅] 클라이언트 연결이 끊어졌습니다. 스트리밍을 중단합니다.")
+                            break  # 클라이언트가 끊어졌으면 더 이상 전송하지 않는다
                         match event.type:
                             case "response.created":
                                 print("[🤖 응답 생성 시작]")
@@ -192,11 +212,14 @@ async def stream_chat(user_input: UserRequest):
                             case _:
                                 yield "\n"
                                 yield f"[📬 기타 이벤트 감지: {event.type}]"
+        except asyncio.CancelledError as e:
+            print("[디버깅] 클라이언트가 스트림 중에 연결을 끊었습니다. 스트림 종료합니다.")
+            yield "\n[클라이언트 연결 끊김 → 스트림 종료]"
         except Exception as e:
+            print(f"[디버깅] 스트림 처리 중 예외 발생: {e}")
             yield f"\nStream Error: {str(e)}"
-            
 
-    return StreamingResponse(generate_with_tool(), media_type="text/plain")
+    return StreamingResponse(generate_with_tool(request), media_type="text/plain")
 
 @app.post("/enter-sub-conversation/{field_name}")
 async def enter_sub_conversation(field_name: str):
