@@ -13,7 +13,7 @@ from db.db_manager import get_mongo_collection  # 새로 추가된 모듈
 #벡터db 객체 생성성
 pinecone_api_key = os.getenv("PINECONE_API_KEY")
 pc = Pinecone(pinecone_api_key)
-pinecone_index = pc.Index("memmo")
+pinecone_index = pc.Index("memmo-ai")
 #ai api 객체 생성
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 #몽고디비 객체 생성
