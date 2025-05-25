@@ -85,24 +85,24 @@ class WritingRequirementsManager:
             if field_name in self.writing_requirements:
                 content = self.writing_requirements[field_name]
                 if content: # 필드에 내용이 있는 경우
-                    #print(f"'{field_name}' 필드 내용:\n{content}")      
+                    print(f"'{field_name}' 필드 내용:\n{content}")      
                     return f"'{field_name}' 필드 내용:\n{content}" 
                     
             else: # 존재하지 않는 필드 이름
-                #print(f"오류: 필드 '{field_name}'는 존재하지 않습니다.")
+                print(f"오류: 필드 '{field_name}'는 존재하지 않습니다.")
                 return f"오류: 필드 '{field_name}'는 존재하지 않습니다.사용자에게 찾아봤으나 현재 요청한 내용을 지원못한다고 알리세요 "
 
         else: # 2. 작성된 필드에 대한 내용 출력 요청 (field_name is None)
             written_fields = []
             for name, content in self.writing_requirements.items():
                 if content: # 필드에 내용이 있는 경우
-                    written_fields.append(f"- {name}: {content}")
+                    written_fields.append(f"{name}: {content}")
 
             if written_fields: # 작성된 필드가 있는 경우
-                #print("현재 작성된 글쓰기 요구사항 필드:\n" + "\n".join(written_fields))
+                print("현재 작성된 글쓰기 요구사항 필드:\n" + "\n".join(written_fields))
                 return "현재 작성된 글쓰기 요구사항 필드:\n" + "\n".join(written_fields)
             else: # 작성된 필드가 없는 경우
-                #print("작성된 글쓰기 요구사항이 아직 없습니다.")
+                print("작성된 글쓰기 요구사항이 아직 없습니다.")
                 return "작성된 글쓰기 요구사항이 아직 없습니다. 이야기를 조금 더 나누어야 된다고 알리세요 "
     
     def reset_requirements(self):

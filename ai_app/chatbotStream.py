@@ -45,14 +45,14 @@ class ChatbotStream:
        # self.memoryManager = MemoryManager()
         self.writingRequirementsManager=WritingRequirementsManager()
         self.field_instructions = {
-            "purpose_background": "글을 쓰는 이유와 배경을 명확히 정리하세요.",
-            "context_topic": "글의 주제나 상황을 중심으로 정리하세요.",
-            "audience_scope": "대상 독자의 특성과 목적에 맞게 정리하세요.",
-            "format_structure": "글의 구조나 형식을 논리적 순서로 정리하세요.",
-            "logic_evidence": "논리 전개나 근거, 자료가 잘 드러나도록 정리하세요.",
-            "expression_method": "문체, 어조, 시점 등을 일관되게 정리하세요.",
-            "additional_constraints": "키워드, 금지어, 조건 등의 제약사항을 명확히 정리하세요.",
-            "output_expectations": "결과물 형태나 완성 기준을 구체적으로 정리하세요."
+            "purpose_background": "당신의 역할은 글을 쓰는 이유와 배경을 명확히 정리하는 역할입니다. 사용자의 질문에 자연스럽게 답하면서 사회성높은 셜록답게 사용자에게 당신이 필요한 정보를 물어보거나 대답하세요.사용자의 오타에는 언급하지말고 답하세요",
+            "context_topic": "글의 주제나 상황을 중심으로 정리하는 역할입니다.사용자의 질문에 사회성높은 셜록답게 사용자에게 당신이 필요한 정보를 물어보거나 자연스럽게 대화하세요 사용자의 오타에는 언급하지말고 답하세요",
+            "audience_scope": "대상 독자의 특성과 목적에 맞게 정리하는 역할입니다.사용자의 질문에 사회성높은 셜록답게 사용자에게 당신이 필요한 정보를 물어보거나 자연스럽게 대화하세요 사용자의 오타에는 언급하지말고 답하세요",
+            "format_structure": "글의 구조나 형식을 논리적 순서로 정리하는 역할입니다.사용자의 질문에 사회성높은 셜록답게 사용자에게 당신이 필요한 정보를 물어보거나 자연스럽게 대화하세요 사용자의 오타에는 언급하지말고 답하세요",
+            "logic_evidence": "논리 전개나 근거, 자료가 잘 드러나도록 정리하역할입니다.사용자의 질문에 사회성높은 셜록답게 사용자에게 당신이 필요한 정보를 물어보거나 자연스럽게 대화하세요 사용자의 오타에는 언급하지말고 답하세요",
+            "expression_method": "문체, 어조, 시점 등을 일관되게 정리하역할입니다.사용자의 질문에 사회성높은 셜록답게 사용자에게 당신이 필요한 정보를 물어보거나 자연스럽게 대화하세요 사용자의 오타에는 언급하지말고 답하세요",
+            "additional_constraints": "키워드, 금지어, 조건 등의 제약사항을 명확히 정리하역할입니다.사용자의 질문에 사회성높은 셜록답게 사용자에게 당신이 필요한 정보를 물어보거나 자연스럽게 대화하세요 사용자의 오타에는 언급하지말고 답하세요",
+            "output_expectations": "결과물 형태나 완성 기준을 구체적으로 정리하역할입니다.사용자의 질문에 사회성높은 셜록답게 사용자에게 당신이 필요한 정보를 물어보거나 자연스럽게 대화하세요 사용자의 오타에는 언급하지말고 답하세요",
         }
        
     def add_user_message_in_context(self, message: str):
@@ -107,10 +107,10 @@ class ChatbotStream:
             #print(f"event: {event}")
             match event.type:
                 case "response.created":
-                    print("[🤖 응답 생성 시작]")
+                    #print("[🤖 응답 생성 시작]")
                     loading = True
                     # 로딩 애니메이션용 대기 시작
-                    print("⏳ GPT가 응답을 준비 중입니다...")
+                    #print("⏳ GPT가 응답을 준비 중입니다...")
                     
                 case "response.output_text.delta":
                     if loading:
@@ -121,13 +121,15 @@ class ChatbotStream:
                  
 
                 case "response.in_progress":
-                    print("[🌀 응답 생성 중...]")
+                    #print("[🌀 응답 생성 중...]")
+                    print()
 
                 case "response.output_item.added":
                     if getattr(event.item, "type", None) == "reasoning":
                         print("[🧠 GPT가 추론을 시작합니다...]")
                     elif getattr(event.item, "type", None) == "message":
-                        print("[📩 메시지 아이템 추가됨]")
+                       # print("[📩 메시지 아이템 추가됨]")
+                       print()
                 #ResponseOutputItemDoneEvent는 우리가 case "response.output_item.done"에서 잡아야 해
                 case "response.output_item.done":
                     item = event.item
