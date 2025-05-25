@@ -12,6 +12,7 @@ from ai_app.assist.ConversationContextFactory import ContextDict
 from ai_app.utils.writingRequirementsManager import WritingRequirementsManager
 from ai_app.assist.characters import get_update_field_prompt
 from typing import List, TypedDict, Literal
+from pydantic import BaseModel, Field
 class MessageDict(TypedDict):
     role: Literal["user", "assistant"]
     content: str
@@ -216,6 +217,7 @@ class ChatbotStream:
 #api요소에만 해당하는부분만 반환해 문맥구성성
     def to_openai_context(self, context):
         return [{"role":v["role"], "content":v["content"]} for v in context]
+    
     def get_current_context(self):
         if self.current_field == "main":
             return self.context
@@ -304,6 +306,7 @@ class ChatbotStream:
             self.sub_contexts[self.current_field] = ConversationContextFactory.create_context(self.current_field)
             '''만약 사용자가 방을 명시적으로 enter_sub_conversation() 하지 않고도, 바로 메시지를 보내는 경우:
             add_user_message_in_context()나 get_current_context() 호출 시 sub_contexts[field_name]이 없을 수 있음. 이때 자동으로 만들어주는 비상용 안전 로직'''
+        
         return self.sub_contexts[self.current_field]["messages"]
 
 
@@ -342,8 +345,8 @@ if __name__ == "__main__":
 
         # 사용자 입력 분석 (함수 호출 여부 확인)
         analyzed = func_calling.analyze(user_input, tools)
-
-        temp_context = chatbot.to_openai_context().copy()
+        current_context = chatbot.get_current_context()
+        temp_context = chatbot.to_openai_context(current_context).copy()
         
 
 
@@ -394,8 +397,7 @@ if __name__ == "__main__":
         streamed_response = chatbot._send_request_Stream(temp_context=temp_context)
         temp_context = None
         chatbot.add_response_stream(streamed_response)
-        print(chatbot.context)
+        #print(chatbot.context)
 
     # === 분기 처리 끝 ===
 
-    
