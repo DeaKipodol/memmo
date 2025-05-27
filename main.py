@@ -10,6 +10,7 @@ import asyncio
 from ai_app.assist.characters import instruction,system_role
 from ai_app.utils.function_calling import FunctionCalling, tools # 단일 함수 호출
 from contextlib import asynccontextmanager
+from ai_app.utils.auto_summary import router as memory_router # 추가
 '''
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -23,6 +24,7 @@ async def lifespan(app: FastAPI):
 #app = FastAPI(lifespan)
 #몽고디비 저장 비활성화 주석
 app = FastAPI()
+app.include_router(memory_router) #추가 - auto_summary.py에 정의된 별도의 API 기능들(예: 요약 조회, 저장 등)을 main 서버에 연결해주는 장치
 '''chatbot = Chatbot(
     model=model.basic,
     system_role = system_role,
@@ -70,9 +72,24 @@ async def stream_chat(user_input: UserRequest):
     """
    # 1) 사용자 메시지를 원본 문맥에 그대로 추가
     chatbot.add_user_message_in_context(user_input.message)
+    # 1-1) MongoDB에 저장
+    chatbot.save_chat()
     # 2) 현재 대화방 문맥 가져오기 및 API 형식 변환
     current_context = chatbot.get_current_context()
     temp_context = chatbot.to_openai_context(current_context).copy()
+    # ✅ [② AutoSummary fallback 판단 및 실행] 
+    from ai_app.utils.auto_summary import get_auto_summary
+    auto_summary = get_auto_summary()
+
+    memory_response = auto_summary.answer_with_memory_check(user_input.message, temp_context)
+    if memory_response is None:
+         print("[main.py] GPT가 인터넷 검색 질문으로 판단 → function_call 흐름으로 계속 진행")
+    # 여기선 아무것도 안 하고 아래 function_call 흐름으로 계속 감
+    else:
+        # memory_search 또는 fallback 조건으로 회상 응답이 생성됨
+        chatbot.add_response_stream(memory_response[0]) # , role="assistant" 삭제함 05-21
+        return {"response": memory_response[0]}  # ❗ 이 시점에서 return 하므로 아래로 안 내려감
+    
     # 3) 복제된 문맥에 지침 추가
     if chatbot.current_field != "main":
         instruction = chatbot.field_instructions.get(chatbot.current_field, chatbot.instruction)
@@ -194,7 +211,6 @@ async def stream_chat(user_input: UserRequest):
                                 yield f"[📬 기타 이벤트 감지: {event.type}]"
         except Exception as e:
             yield f"\nStream Error: {str(e)}"
-            
 
     return StreamingResponse(generate_with_tool(), media_type="text/plain")
 
@@ -217,7 +233,6 @@ async def enter_sub_conversation(field_name: str):
         raise HTTPException(status_code=400, detail="유효하지 않은 서브 대화방입니다.")
     message = chatbot.enter_sub_conversation(field_name)
     return {"message": message}
-
 @app.post("/exit-conversation")
 async def exit_conversation():
     """

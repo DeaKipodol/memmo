@@ -1,0 +1,34 @@
+// LangGraph 기반 글쓰기 시스템 흐름
+digraph {
+	A [label="ReadRequirements
+(요구사항 로딩)"]
+	B [label="TypeDetector
+(글 유형 판별)"]
+	C [label="PriorityMapping
+(필드 우선순위)"]
+	D [label="PlanPromptGenerator
+(계획 프롬프트 생성)"]
+	E [label="SampleDraft
+(예시 도입부 생성)"]
+	F [label="TaskAgent_i
+(필드별 작업 모듈)"]
+	G [label="SampleExplanation
+(작업 설명 정리)"]
+	H [label="UpdateFewShotExamples
+(예외 예시 갱신)"]
+	I [label="ClarifyInfo
+(질문/정보 보완)"]
+	J [label="FinalDraft
+(최종 결과 생성)"]
+	A -> B
+	B -> C
+	C -> D
+	D -> E
+	E -> F [label="계획 따라 전달"]
+	F -> G [label="편집 결과 → 설명"]
+	G -> J [label="메타데이터 → 최종 결과"]
+	F -> H [label="오류 감지 시"]
+	J -> I [label="정보 부족 시"]
+	I -> F [label="요구사항 보완 후 재작업"]
+	rankdir=LR
+}
