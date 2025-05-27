@@ -6,13 +6,14 @@ from ai_app.assist.common import client, model,makeup_response
 from ai_app.assist.characters import instruction,system_role
 import math
 from ai_app.utils.function_calling import FunctionCalling,tools
-#from db.memory_manager import MemoryManager
+from db.memory_manager import MemoryManager 
 from ai_app.assist.ConversationContextFactory import ConversationContextFactory
 from ai_app.assist.ConversationContextFactory import ContextDict 
 from ai_app.utils.writingRequirementsManager import WritingRequirementsManager
 from ai_app.assist.characters import get_update_field_prompt
 from typing import List, TypedDict, Literal
-from pydantic import BaseModel, Field
+from ai_app.utils.auto_summary import AutoSummary
+
 class MessageDict(TypedDict):
     role: Literal["user", "assistant"]
     content: str
@@ -43,17 +44,22 @@ class ChatbotStream:
     
         self.username=kwargs["user"]
         self.assistantname=kwargs["assistant"]
-       # self.memoryManager = MemoryManager()
+        self.memoryManager = MemoryManager()
         self.writingRequirementsManager=WritingRequirementsManager()
+              # ← AutoSummary 초기화: 메시지 10회마다 요약과 동시에 벡터화
+        self.auto_summary = AutoSummary(
+            summarize_threshold=10,
+            summary_length=100
+        )
         self.field_instructions = {
             "purpose_background": "당신의 역할은 글을 쓰는 이유와 배경을 명확히 정리하는 역할입니다. 사용자의 질문에 자연스럽게 답하면서 사회성높은 셜록답게 사용자에게 당신이 필요한 정보를 물어보거나 대답하세요.사용자의 오타에는 언급하지말고 답하세요",
             "context_topic": "글의 주제나 상황을 중심으로 정리하는 역할입니다.사용자의 질문에 사회성높은 셜록답게 사용자에게 당신이 필요한 정보를 물어보거나 자연스럽게 대화하세요 사용자의 오타에는 언급하지말고 답하세요",
             "audience_scope": "대상 독자의 특성과 목적에 맞게 정리하는 역할입니다.사용자의 질문에 사회성높은 셜록답게 사용자에게 당신이 필요한 정보를 물어보거나 자연스럽게 대화하세요 사용자의 오타에는 언급하지말고 답하세요",
             "format_structure": "글의 구조나 형식을 논리적 순서로 정리하는 역할입니다.사용자의 질문에 사회성높은 셜록답게 사용자에게 당신이 필요한 정보를 물어보거나 자연스럽게 대화하세요 사용자의 오타에는 언급하지말고 답하세요",
-            "logic_evidence": "논리 전개나 근거, 자료가 잘 드러나도록 정리하역할입니다.사용자의 질문에 사회성높은 셜록답게 사용자에게 당신이 필요한 정보를 물어보거나 자연스럽게 대화하세요 사용자의 오타에는 언급하지말고 답하세요",
-            "expression_method": "문체, 어조, 시점 등을 일관되게 정리하역할입니다.사용자의 질문에 사회성높은 셜록답게 사용자에게 당신이 필요한 정보를 물어보거나 자연스럽게 대화하세요 사용자의 오타에는 언급하지말고 답하세요",
-            "additional_constraints": "키워드, 금지어, 조건 등의 제약사항을 명확히 정리하역할입니다.사용자의 질문에 사회성높은 셜록답게 사용자에게 당신이 필요한 정보를 물어보거나 자연스럽게 대화하세요 사용자의 오타에는 언급하지말고 답하세요",
-            "output_expectations": "결과물 형태나 완성 기준을 구체적으로 정리하역할입니다.사용자의 질문에 사회성높은 셜록답게 사용자에게 당신이 필요한 정보를 물어보거나 자연스럽게 대화하세요 사용자의 오타에는 언급하지말고 답하세요",
+            "logic_evidence": "논리 전개나 근거, 자료가 잘 드러나도록 정리하는 역할입니다.사용자의 질문에 사회성높은 셜록답게 사용자에게 당신이 필요한 정보를 물어보거나 자연스럽게 대화하세요 사용자의 오타에는 언급하지말고 답하세요",
+            "expression_method": "문체, 어조, 시점 등을 일관되게 정리하는 역할입니다.사용자의 질문에 사회성높은 셜록답게 사용자에게 당신이 필요한 정보를 물어보거나 자연스럽게 대화하세요 사용자의 오타에는 언급하지말고 답하세요",
+            "additional_constraints": "키워드, 금지어, 조건 등의 제약사항을 명확히 정리하는 역할입니다.사용자의 질문에 사회성높은 셜록답게 사용자에게 당신이 필요한 정보를 물어보거나 자연스럽게 대화하세요 사용자의 오타에는 언급하지말고 답하세요",
+            "output_expectations": "결과물 형태나 완성 기준을 구체적으로 정리하는 역할입니다.사용자의 질문에 사회성높은 셜록답게 사용자에게 당신이 필요한 정보를 물어보거나 자연스럽게 대화하세요 사용자의 오타에는 언급하지말고 답하세요"
         }
        
     def add_user_message_in_context(self, message: str):
@@ -108,10 +114,10 @@ class ChatbotStream:
             #print(f"event: {event}")
             match event.type:
                 case "response.created":
-                    #print("[🤖 응답 생성 시작]")
+                    print("[🤖 응답 생성 시작]")
                     loading = True
                     # 로딩 애니메이션용 대기 시작
-                    #print("⏳ GPT가 응답을 준비 중입니다...")
+                    print("⏳ GPT가 응답을 준비 중입니다...")
                     
                 case "response.output_text.delta":
                     if loading:
@@ -122,15 +128,13 @@ class ChatbotStream:
                  
 
                 case "response.in_progress":
-                    #print("[🌀 응답 생성 중...]")
-                    print()
+                    print("[🌀 응답 생성 중...]")
 
                 case "response.output_item.added":
                     if getattr(event.item, "type", None) == "reasoning":
                         print("[🧠 GPT가 추론을 시작합니다...]")
                     elif getattr(event.item, "type", None) == "message":
-                       # print("[📩 메시지 아이템 추가됨]")
-                       print()
+                        print("[📩 메시지 아이템 추가됨]")
                 #ResponseOutputItemDoneEvent는 우리가 case "response.output_item.done"에서 잡아야 해
                 case "response.output_item.done":
                     item = event.item
@@ -182,7 +186,9 @@ class ChatbotStream:
                 if self.current_field not in self.sub_contexts:
                     self.sub_contexts[self.current_field] = {"messages": []}
                 self.sub_contexts[self.current_field]["messages"].append(assistant_message)
-                    
+      
+            # ← 메시지가 들어올 때마다 요약·벡터화 검사 추가
+            self.auto_summary.maybe_summarize(self.context)                    
 
     def get_response(self, response_text: str):
         """
@@ -217,7 +223,6 @@ class ChatbotStream:
 #api요소에만 해당하는부분만 반환해 문맥구성성
     def to_openai_context(self, context):
         return [{"role":v["role"], "content":v["content"]} for v in context]
-    
     def get_current_context(self):
         if self.current_field == "main":
             return self.context
@@ -306,7 +311,6 @@ class ChatbotStream:
             self.sub_contexts[self.current_field] = ConversationContextFactory.create_context(self.current_field)
             '''만약 사용자가 방을 명시적으로 enter_sub_conversation() 하지 않고도, 바로 메시지를 보내는 경우:
             add_user_message_in_context()나 get_current_context() 호출 시 sub_contexts[field_name]이 없을 수 있음. 이때 자동으로 만들어주는 비상용 안전 로직'''
-        
         return self.sub_contexts[self.current_field]["messages"]
 
 
@@ -345,8 +349,8 @@ if __name__ == "__main__":
 
         # 사용자 입력 분석 (함수 호출 여부 확인)
         analyzed = func_calling.analyze(user_input, tools)
-        current_context = chatbot.get_current_context()
-        temp_context = chatbot.to_openai_context(current_context).copy()
+
+        temp_context = chatbot.to_openai_context().copy()
         
 
 
@@ -397,7 +401,8 @@ if __name__ == "__main__":
         streamed_response = chatbot._send_request_Stream(temp_context=temp_context)
         temp_context = None
         chatbot.add_response_stream(streamed_response)
-        #print(chatbot.context)
+        print(chatbot.context)
 
     # === 분기 처리 끝 ===
 
+    
