@@ -4,16 +4,24 @@ import android.animation.ValueAnimator
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
+import android.graphics.Rect
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.view.WindowManager
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.PopupMenu
+import android.widget.RelativeLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,6 +38,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.ContextCompat
 import com.example.thenewchatapp.MainActivity.Companion.prefs
 
 class FieldChatActivity : AppCompatActivity() {
@@ -46,12 +55,19 @@ class FieldChatActivity : AppCompatActivity() {
     private lateinit var recyclerEntry: RecyclerView
     private val viewModel: FieldViewModel by viewModels()
     private lateinit var tvFieldTitle: TextView
+    private var isEasyCommandVisible = false
+    private lateinit var chatContainer: RelativeLayout
+    private lateinit var fragmentContainer: FrameLayout
 
     private val chatMessages = mutableListOf<ChatMessage>()
     private lateinit var chatAdapter: ChatAdapter
 
     private lateinit var categoryAdapter: EasyCommandCategoryAdapter
     private lateinit var entryAdapter: EasyCommandEntryAdapter
+
+    private lateinit var inputArea: FrameLayout
+    private lateinit var recyclerEasyCommand: RecyclerView
+    private lateinit var recyclerCommandEntry: RecyclerView
 
     private val easyCommandMap = mutableMapOf(
         "요약" to mutableListOf("간단 요약: 이 내용을 간단하게 요약해줘"),
@@ -115,6 +131,12 @@ class FieldChatActivity : AppCompatActivity() {
         recyclerEntry   = findViewById(R.id.recyclerCommandEntry)
         btnVoice = findViewById(R.id.btnVoice)
         tvFieldTitle      = findViewById(R.id.tvFieldTitle)
+        chatContainer     = findViewById(R.id.chatContainer)
+        fragmentContainer = findViewById(R.id.fragmentContainer)
+
+        inputArea = findViewById(R.id.inputArea)
+        recyclerEasyCommand = findViewById(R.id.recyclerEasyCommand)
+        recyclerCommandEntry = findViewById(R.id.recyclerCommandEntry)
 
         // ViewModel 기본 제목 초기화 (한 번만)
         viewModel.initTitles(fieldKeys)
@@ -211,6 +233,16 @@ class FieldChatActivity : AppCompatActivity() {
                     startActivity(Intent(this@FieldChatActivity, FieldActivity::class.java))
                     true
                 }
+                menu.add("이지커맨드").setOnMenuItemClickListener {
+                    dismiss()
+                    recyclerEasyCommand.post {
+                        showEasyCommandLists()
+                    }
+                    true
+                }
+                setOnDismissListener {
+                    // 팝업 닫힐 때 별도 처리 필요없으면 비워둬도 됨
+                }
                 show()
             }
         }
@@ -256,26 +288,23 @@ class FieldChatActivity : AppCompatActivity() {
             false
         }
 
-        // **1. 포커스 해제 시 숨김 (이미 구현)**
+//        // **1. 포커스 해제 시 숨김 (이미 구현)**
+//        messageEditText.setOnFocusChangeListener { _, hasFocus ->
+//            if (hasFocus) {
+//                recyclerCategory.visibility = View.VISIBLE
+//                recyclerEntry.visibility = View.VISIBLE
+//            } else {
+//                recyclerCategory.visibility = View.GONE
+//                recyclerEntry.visibility = View.GONE
+//            }
+
         messageEditText.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
-                recyclerCategory.visibility = View.VISIBLE
-                recyclerEntry.visibility = View.VISIBLE
-            } else {
-                recyclerCategory.visibility = View.GONE
-                recyclerEntry.visibility = View.GONE
-            }
-        }
-
-       fun onBackPressed() {
-            if (messageEditText.hasFocus()) {
-                // EditText에 포커스 남아 있으면 해제만
-                messageEditText.clearFocus()
-                } else {
-                // 그렇지 않으면 기본 뒤로가기
-                super.onBackPressed()
+                if (isEasyCommandVisible) {
+                    hideEasyCommandLists()
                 }
             }
+        }
 
         // 결과 생성 버튼 클릭
         createResultButton.setOnClickListener {
@@ -369,6 +398,35 @@ class FieldChatActivity : AppCompatActivity() {
                 }
             }
         }
+
+        // 챗봇창 입력 필드 글자수에 따라서 radius 자동 변경되는 코드
+        messageEditText.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+                // UI 업데이트를 보장하기 위해 post 사용
+                messageEditText.post {
+                    val lineCount = messageEditText.lineCount
+                    val density = messageEditText.resources.displayMetrics.density
+
+                    val maxRadius = 100f * density
+                    val minRadius = 10f * density
+
+                    val radius = (maxRadius - (lineCount - 1) * 50f * density).coerceAtLeast(minRadius)
+
+                    val bgDrawable = GradientDrawable().apply {
+                        setColor(ContextCompat.getColor(messageEditText.context, R.color.grey2))
+                        cornerRadius = radius
+                    }
+
+                    messageEditText.background = bgDrawable
+                }
+            }
+
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+
+        setupKeyboardListener()
+
     }
 
     private fun externalReply(sentMsg: String): String = "Reply to: $sentMsg"
@@ -543,7 +601,197 @@ class FieldChatActivity : AppCompatActivity() {
             .show(supportFragmentManager, "CommandDetail")
     }
 
+
+    private fun measureViewHeight(view: View): Int {
+        val widthSpec = View.MeasureSpec.makeMeasureSpec(view.width, View.MeasureSpec.EXACTLY)
+        val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        view.measure(widthSpec, heightSpec)
+        return view.measuredHeight
+    }
+
+    private fun showEasyCommandLists() {
+        if (isEasyCommandVisible) return
+        isEasyCommandVisible = true
+
+        recyclerEasyCommand.visibility = View.VISIBLE
+        recyclerCommandEntry.visibility = View.VISIBLE
+
+        recyclerEasyCommand.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                recyclerEasyCommand.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                recyclerCommandEntry.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+                    override fun onGlobalLayout() {
+                        recyclerCommandEntry.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                        adjustInputAreaForEasyCommand(true)
+                    }
+                })
+            }
+        })
+    }
+
+
+
+    private fun hideEasyCommandLists() {
+        if (!isEasyCommandVisible) return  // 이미 꺼져 있으면 실행 안 함
+        isEasyCommandVisible = false
+
+        recyclerEasyCommand.visibility = View.GONE
+        recyclerCommandEntry.visibility = View.GONE
+        adjustInputAreaForEasyCommand(false)
+    }
+
+    private fun toggleEasyCommand() {
+        if (isEasyCommandVisible) {
+            hideEasyCommandLists()
+        } else {
+            showEasyCommandLists()
+        }
+    }
+
+
+
+    private fun setupKeyboardListener() {
+        val rootView = findViewById<View>(android.R.id.content)
+        rootView.viewTreeObserver.addOnGlobalLayoutListener {
+            val rect = Rect()
+            rootView.getWindowVisibleDisplayFrame(rect)
+            val screenHeight = rootView.rootView.height
+            val keypadHeight = screenHeight - rect.bottom
+
+            if (keypadHeight > screenHeight * 0.15) {
+                // 키보드가 올라간 상태
+                Log.d("Keyboard", "키보드 올라감")
+            } else {
+                // 키보드 내려간 상태
+                Log.d("Keyboard", "키보드 내려감")
+                if (isEasyCommandVisible) {
+                    // 마진이 남아있으면 기본값으로 초기화
+                    adjustInputAreaForEasyCommand(false)
+                }
+            }
+        }
+    }
+
+
+
+
+    private fun dpToPx(dp: Int): Int {
+        return (dp * resources.displayMetrics.density).toInt()
+    }
+
+//    private fun adjustInputAreaForEasyCommand(show: Boolean) {
+//        val params = inputArea.layoutParams as ViewGroup.MarginLayoutParams
+//        if (show) {
+//            val easyHeight = recyclerEasyCommand.height + recyclerCommandEntry.height + dpToPx(20)
+//            Log.d("AdjustInputArea", "recyclerEasyCommand.height = ${recyclerEasyCommand.height}, recyclerCommandEntry.height = ${recyclerCommandEntry.height}, easyHeight = $easyHeight")
+//            params.bottomMargin = easyHeight
+//        } else {
+//            params.bottomMargin = dpToPx(10)
+//            Log.d("AdjustInputArea", "Set bottomMargin to default ${dpToPx(10)}")
+//        }
+//        inputArea.layoutParams = params
+//        inputArea.requestLayout()
+//    }
+
+    private fun adjustInputAreaForEasyCommand(show: Boolean) {
+        val params = inputArea.layoutParams as ViewGroup.MarginLayoutParams
+        val desiredMargin = if (show) {
+            // 두 리사이클러뷰 높이 합 + 여유 마진(dpToPx)
+            recyclerEasyCommand.height + recyclerCommandEntry.height + dpToPx(16)
+        } else {
+            dpToPx(10)
+        }
+
+        if (params.bottomMargin != desiredMargin) {
+            params.bottomMargin = desiredMargin
+            inputArea.layoutParams = params
+            inputArea.requestLayout()
+            Log.d("AdjustInputArea", "Set bottomMargin to $desiredMargin")
+        } else {
+            Log.d("AdjustInputArea", "bottomMargin already set to $desiredMargin, skip")
+        }
+    }
+
     companion object {
         fun newInstance(): FieldChatActivity = FieldChatActivity()
     }
+
+//    override fun onBackPressed() {
+//        if (recyclerEasyCommand.visibility == View.VISIBLE || recyclerCommandEntry.visibility == View.VISIBLE) {
+//            hideEasyCommandLists() // 뷰 숨기고 inputArea 조절
+//        } else if (fragmentContainer.visibility == View.VISIBLE) {
+//            supportFragmentManager.popBackStack()
+//            fragmentContainer.visibility = View.GONE
+//            chatContainer.visibility = View.VISIBLE
+//        } else {
+//            super.onBackPressed()
+//        }
+//    }
+
+    override fun onBackPressed() {
+        if (isEasyCommandVisible) {
+            hideEasyCommandLists()
+        } else if (fragmentContainer.visibility == View.VISIBLE) {
+            supportFragmentManager.popBackStack()
+            fragmentContainer.visibility = View.GONE
+            chatContainer.visibility = View.VISIBLE
+        } else {
+            super.onBackPressed()
+        }
+    }
+
+//    override fun onBackPressed() {
+//        if (fragmentContainer.visibility == View.VISIBLE) {
+//            supportFragmentManager.popBackStack()
+//            fragmentContainer.visibility = View.GONE
+//            chatContainer.visibility     = View.VISIBLE
+//
+//            recyclerEasyCommand.visibility = View.GONE
+//            recyclerCommandEntry.visibility = View.GONE
+//        } else {
+//            super.onBackPressed()
+//        }
+//    }
+
+//    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+//        if (ev.action == MotionEvent.ACTION_DOWN) {
+//            // ▶ 터치 위치 계산
+//            val x = ev.rawX.toInt()
+//            val y = ev.rawY.toInt()
+//            // EditText, 카테고리, 엔트리 영역 Rect
+//            val editRect = Rect().apply { messageEditText.getGlobalVisibleRect(this) }
+//            val catRect  = Rect().apply { recyclerCategory.getGlobalVisibleRect(this) }
+//            val entRect  = Rect().apply { recyclerEntry.getGlobalVisibleRect(this) }
+//            // 이 영역들 외부 클릭 시에만 포커스 해제
+//            if (!editRect.contains(x, y) && !catRect.contains(x, y) && !entRect.contains(x, y)) {
+//                currentFocus?.clearFocus()
+//                }
+//        }
+//        return super.dispatchTouchEvent(ev)
+//    }
+
+
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (ev.action == MotionEvent.ACTION_DOWN) {
+            val x = ev.rawX.toInt()
+            val y = ev.rawY.toInt()
+
+            val easyCmdRect = Rect().apply { recyclerEasyCommand.getGlobalVisibleRect(this) }
+            val cmdEntryRect = Rect().apply { recyclerCommandEntry.getGlobalVisibleRect(this) }
+            val plusBtnRect = Rect().apply { btnPlus.getGlobalVisibleRect(this) }
+
+            // 리스트 외 클릭 시 닫기
+            if ((recyclerEasyCommand.visibility == View.VISIBLE || recyclerCommandEntry.visibility == View.VISIBLE)
+                && !easyCmdRect.contains(x, y)
+                && !cmdEntryRect.contains(x, y)
+                && !plusBtnRect.contains(x, y)) {
+                recyclerEasyCommand.visibility = View.GONE
+                recyclerCommandEntry.visibility = View.GONE
+                adjustInputAreaForEasyCommand(false)
+                currentFocus?.clearFocus()
+            }
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
 }

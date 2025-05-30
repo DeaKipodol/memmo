@@ -4,8 +4,10 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
+import android.widget.ArrayAdapter
 import android.widget.FrameLayout
 import android.widget.ImageButton
+import android.widget.ListPopupWindow
 import androidx.appcompat.widget.PopupMenu
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -112,21 +114,67 @@ class FieldActivity : AppCompatActivity() {
             viewModel.contents.observe(this) { fieldAdapter.notifyDataSetChanged() }
 
             // ➕ 버튼 팝업 메뉴
+//        btnPlus.setOnClickListener { anchor ->
+//            // ▲ Gravity.TOP 지정: 메뉴를 버튼 위로 띄움
+//            val popup = PopupMenu(this@FieldActivity, anchor, Gravity.TOP)
+//            popup.apply {
+//                    menu.add("챗봇").setOnMenuItemClickListener {
+//                        startActivity(Intent(this@FieldActivity, FieldChatActivity::class.java))
+//                        true
+//                    }
+//                    menu.add("글쓰기").setOnMenuItemClickListener {
+//                        startActivity(Intent(this@FieldActivity, MainActivity::class.java))
+//                        true
+//                    }
+//                    show()
+//                }
+//            }
+
         btnPlus.setOnClickListener { anchor ->
-            // ▲ Gravity.TOP 지정: 메뉴를 버튼 위로 띄움
-            val popup = PopupMenu(this@FieldActivity, anchor, Gravity.TOP)
-            popup.apply {
-                    menu.add("챗봇").setOnMenuItemClickListener {
-                        startActivity(Intent(this@FieldActivity, FieldChatActivity::class.java))
-                        true
+            val listPopupWindow = ListPopupWindow(this, null, android.R.attr.listPopupWindowStyle)
+
+            // 메뉴 아이템 설정
+            val items = listOf("챗봇", "글쓰기")
+            val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, items)
+            listPopupWindow.setAdapter(adapter)
+
+            // 앵커 뷰 설정 (팝업이 뜰 기준 뷰)
+            listPopupWindow.anchorView = anchor
+
+            // 팝업창의 너비 설정 (옵션)
+            listPopupWindow.setContentWidth(500) // 예시: 300px 또는 WRAP_CONTENT 등
+
+            // 메뉴 아이템 클릭 리스너 설정
+            listPopupWindow.setOnItemClickListener { _, _, position, _ ->
+                val selectedItem = items[position]
+                when (selectedItem) {
+                    "챗봇" -> {
+                        val intent = Intent(this, FieldChatActivity::class.java)
+                        startActivity(intent)
                     }
-                    menu.add("글쓰기").setOnMenuItemClickListener {
-                        startActivity(Intent(this@FieldActivity, MainActivity::class.java))
-                        true
+                    "글쓰기" -> {
+                        val intent = Intent(this, MainActivity::class.java)
+                        startActivity(intent)
                     }
-                    show()
                 }
+                listPopupWindow.dismiss() // 메뉴 선택 후 팝업 닫기
             }
+
+            // 팝업 위치를 버튼 위로 조정
+            // ListPopupWindow는 기본적으로 앵커 뷰 아래에 표시됩니다.
+            // verticalOffset을 음수 값으로 설정하여 위로 올립니다.
+            // 정확히 버튼 위에 위치시키려면 (앵커 뷰 높이 + 팝업창 자체의 높이) 만큼 올려야 합니다.
+            anchor.post { // 앵커 뷰의 높이를 정확히 가져오기 위해 post 사용
+                // 팝업창 내용의 높이를 계산 (아이템 개수 * 아이템 당 예상 높이)
+                // 실제 아이템 뷰를 측정하는 것이 가장 정확하지만, 여기서는 간이 계산법을 사용합니다.
+                val density = this.resources.displayMetrics.density
+                val estimatedItemHeight = (48 * density).toInt() // 일반적인 아이템 높이 48dp
+                val popupContentHeight = estimatedItemHeight * adapter.count
+
+                listPopupWindow.verticalOffset = -(anchor.height + popupContentHeight)
+                listPopupWindow.show()
+            }
+        }
 
             // 음성 버튼 (추후 구현)
             btnVoice.setOnClickListener {

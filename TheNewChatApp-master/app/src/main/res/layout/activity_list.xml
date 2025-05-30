@@ -151,7 +151,7 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
         android:text=""
-        app:backgroundTint="@color/background_light"
+        app:backgroundTint="#B9E6FB"
         app:icon="@drawable/baseline_add_24"
         app:iconTint="@android:color/black"
         tools:visibility="visible" />
