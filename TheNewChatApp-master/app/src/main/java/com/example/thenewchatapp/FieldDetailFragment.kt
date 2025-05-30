@@ -4,17 +4,27 @@ import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.*
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
-import androidx.appcompat.widget.PopupMenu
+import android.widget.PopupMenu
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+
 import android.view.Gravity
 import android.widget.ArrayAdapter
 import android.widget.ListPopupWindow
+
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+import java.io.IOException
+import java.util.concurrent.TimeUnit
+
 
 class FieldDetailFragment : Fragment(R.layout.fragment_field_detail) {
 
@@ -43,6 +53,23 @@ class FieldDetailFragment : Fragment(R.layout.fragment_field_detail) {
         }
     }
 
+    // 🆕 한글 필드 → 서버용 영문 키 매핑
+    private val fieldNameToKey = mapOf(
+        "목적" to "purpose_background",
+        "주제" to "context_topic",
+        "독자" to "audience_scope",
+        "형식 혹은 구조" to "format_structure",
+        "근거자료" to "logic_evidence",
+        "어조" to "expression_method",
+        "분량, 문체, 금지어 등" to "additional_constraints",
+        "추가사항" to "output_expectations"
+    )
+
+    private val fieldKeys = listOf(
+        "목적","주제","독자","형식 혹은 구조",
+        "근거자료","어조","분량, 문체, 금지어 등","추가사항"
+    )
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
@@ -51,13 +78,7 @@ class FieldDetailFragment : Fragment(R.layout.fragment_field_detail) {
         }
     }
 
-    private val fieldKeys = listOf(
-        "목적","주제","독자","형식 혹은 구조",
-        "근거자료","어조","분량, 문체, 금지어 등","추가사항"
-    )
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-
         super.onViewCreated(view, savedInstanceState)
 
         editTextTitle   = view.findViewById(R.id.editTextTitle)
@@ -70,22 +91,12 @@ class FieldDetailFragment : Fragment(R.layout.fragment_field_detail) {
         editTextTitle.setText(titleArg)
         editTextContent.setText(contentArg)
 
-        // 2) 제목 초기화: ViewModel에 저장된 값이 있으면 그걸, 없으면 fieldKey 그대로
+        // ViewModel에서 값 불러오기
         val initialTitle = viewModel.getTitle(titleArg).ifEmpty { titleArg }
         editTextTitle.setText(initialTitle)
+        editTextContent.setText(viewModel.getContent(titleArg))
 
-        // 3) 내용 초기화
-        val initialContent = viewModel.getContent(titleArg)
-        editTextContent.setText(initialContent)
-
-        // 1) fieldKey 가져오기
-        val fieldKey = arguments?.getString(ARG_TITLE) ?: ""
-
-        // 2) ViewModel 에서 이전에 저장된 값 불러오기
-        editTextTitle.setText(viewModel.getTitle(fieldKey))
-        editTextContent.setText(viewModel.getContent(fieldKey))
-
-        // 3) 변경될 때마다 ViewModel에 저장
+        // 변경 감지 리스너
         editTextTitle.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 viewModel.setTitle(titleArg, s.toString())
@@ -94,18 +105,17 @@ class FieldDetailFragment : Fragment(R.layout.fragment_field_detail) {
             override fun onTextChanged(s: CharSequence?, st: Int, b: Int, c: Int) = Unit
         })
 
-        editTextContent.setText(viewModel.getContent(titleArg))
-
         editTextContent.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
-                viewModel.setContent(fieldKey, s.toString())
+                viewModel.setContent(titleArg, s.toString())
             }
             override fun beforeTextChanged(s: CharSequence?, st: Int, c: Int, a: Int) = Unit
             override fun onTextChanged(s: CharSequence?, st: Int, b: Int, c: Int) = Unit
         })
 
-        // + 버튼 팝업 (챗봇 / 글 정리)
+        // + 버튼 팝업
         btnPlus.setOnClickListener { anchor ->
+
             val listPopupWindow = ListPopupWindow(requireContext(), null, android.R.attr.listPopupWindowStyle)
 
             // 메뉴 아이템 설정
@@ -151,10 +161,16 @@ class FieldDetailFragment : Fragment(R.layout.fragment_field_detail) {
 
                 listPopupWindow.verticalOffset = -(anchor.height + popupContentHeight)
                 listPopupWindow.show()
+
             }
         }
 
-        // 포커스 잃으면 제목/내용 저장
+        // 음성 버튼
+        btnVoice.setOnClickListener {
+            Toast.makeText(requireContext(), "음성 인식 기능은 추후 추가됩니다.", Toast.LENGTH_SHORT).show()
+        }
+
+        // 포커스 리스너
         editTextTitle.setOnFocusChangeListener { _, has ->
             if (!has) savedFieldTitles[titleArg] = editTextTitle.text.toString()
         }
@@ -163,7 +179,74 @@ class FieldDetailFragment : Fragment(R.layout.fragment_field_detail) {
         }
     }
 
-    // 임시 저장용 맵 (fragment-wide)
+    // 임시 저장용 맵
     private val savedFieldTitles   = mutableMapOf<String, String>()
     private val savedFieldContents = mutableMapOf<String, String>()
+
+    //  서버 통신 함수
+    private fun updateFieldViaServer(fieldKey: String, content: String, fieldLabel: String) {
+        val client = OkHttpClient.Builder() //소켓타임아웃방지코드
+            .connectTimeout(1, TimeUnit.DAYS)
+            .readTimeout(1, TimeUnit.DAYS)
+            .writeTimeout(1, TimeUnit.DAYS)
+            .build()
+
+        val json = JSONObject().apply {
+            put("field_name", fieldKey)
+            put("content", content)
+        }
+
+        val requestBody = json.toString().toRequestBody("application/json".toMediaType())
+        Log.d("UpdateDebug", "Sending to server: field=$fieldKey, content=$content")
+        val request = Request.Builder()
+            .url("http://54.252.159.52:5000/update-field")
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                activity?.runOnUiThread {
+                    Toast.makeText(requireContext(), "서버 연결 실패", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val bodyString = response.body?.string()
+                Log.d("UpdateDebug", "응답 코드: ${response.code}")
+                Log.d("UpdateDebug", "응답 본문: $bodyString")
+
+                if (!response.isSuccessful || bodyString == null) {
+                    activity?.runOnUiThread {
+                        Toast.makeText(requireContext(), "서버 응답 오류", Toast.LENGTH_SHORT).show()
+                    }
+                    return
+                }
+
+                try {
+                    val json = JSONObject(bodyString)
+                    val rawSummary = json.optString("content", "요약 실패")
+
+                    val bodyOnly = Regex("<BODY>(.*?)</BODY>", RegexOption.DOT_MATCHES_ALL)
+                        .find(rawSummary)
+                        ?.groups?.get(1)
+                        ?.value
+                        ?.replace(Regex("-\\s*"), "")
+                        ?.replace("\\s+".toRegex(), " ")
+                        ?.trim()
+                        ?: rawSummary
+
+                    activity?.runOnUiThread {
+                        editTextContent.setText(bodyOnly)
+                        viewModel.setContent(fieldLabel, bodyOnly)
+                        Toast.makeText(requireContext(), "요약 및 저장 완료", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Log.e("UpdateDebug", "응답 파싱 중 오류: ${e.localizedMessage}")
+                    activity?.runOnUiThread {
+                        Toast.makeText(requireContext(), "응답 파싱 실패", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        })
+    }
 }

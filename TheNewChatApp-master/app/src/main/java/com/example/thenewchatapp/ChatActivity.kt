@@ -39,6 +39,7 @@ import android.util.Log
 import android.view.ViewTreeObserver
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import java.util.concurrent.TimeUnit
 
 class ChatActivity : AppCompatActivity() {
 
@@ -182,7 +183,11 @@ class ChatActivity : AppCompatActivity() {
         // ➕ 버튼 팝업 메뉴
         btnPlus.setOnClickListener { anchorView ->
             PopupMenu(this, anchorView).apply {
-                menu.add("요구사항").setOnMenuItemClickListener {
+                menu.add("일반 글 화면").setOnMenuItemClickListener {
+                    startActivity(Intent(this@ChatActivity, MainActivity::class.java))
+                    true
+                }
+                menu.add("필드 화면").setOnMenuItemClickListener {
                     startActivity(Intent(this@ChatActivity, FieldActivity::class.java))
                     true
                 }
@@ -199,6 +204,8 @@ class ChatActivity : AppCompatActivity() {
                 show()
             }
         }
+
+
 
         // 초기 엔트리 리스트 세팅
         updateEntryList()
@@ -242,6 +249,9 @@ class ChatActivity : AppCompatActivity() {
                 }
             }
         }
+
+
+
 
         // 결과 생성 버튼 클릭
         createResultButton.setOnClickListener {
@@ -482,7 +492,12 @@ class ChatActivity : AppCompatActivity() {
 
         fun sendChatRequest(userMessage: String, onChunk: (String) -> Unit) {
             CoroutineScope(Dispatchers.IO).launch {
-                val client = OkHttpClient()
+                val client = OkHttpClient.Builder() //소켓타임아웃방지코드
+                    .connectTimeout(30, TimeUnit.SECONDS)  // 연결 타임아웃 30초
+                    .readTimeout(0, TimeUnit.SECONDS)      // 스트리밍 응답 무제한 대기 (중요!)
+                    .writeTimeout(30, TimeUnit.SECONDS)    // 쓰기 타임아웃 30초
+                    .build()
+
                 val body = JSONObject().put("message", userMessage).toString()
                     .toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
                 val req = Request.Builder()
