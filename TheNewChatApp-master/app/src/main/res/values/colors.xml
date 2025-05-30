@@ -17,7 +17,7 @@
     <color name="btn_icon">#000000</color>
     <color name="text_main">#000000</color>
     <color name="hint_text">#888888</color>
-    <color name="background_light">#B9E6FB</color>
+    <color name="background_light">#FFFFFF</color>
     <color name="btn_icon_tint">#000000</color>
     <color name="commandButton">#6200EE</color>
     <color name="micButton">#03DAC5</color>

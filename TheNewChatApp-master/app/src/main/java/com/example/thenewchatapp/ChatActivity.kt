@@ -699,13 +699,6 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
-
-
-
-
-
-
-
 //    override fun onBackPressed() {
 //        if (fragmentContainer.visibility == View.VISIBLE) {
 //            supportFragmentManager.popBackStack()

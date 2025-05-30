@@ -13,12 +13,18 @@ import android.widget.PopupMenu
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+
+import android.view.Gravity
+import android.widget.ArrayAdapter
+import android.widget.ListPopupWindow
+
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+
 
 class FieldDetailFragment : Fragment(R.layout.fragment_field_detail) {
 
@@ -109,23 +115,53 @@ class FieldDetailFragment : Fragment(R.layout.fragment_field_detail) {
 
         // + 버튼 팝업
         btnPlus.setOnClickListener { anchor ->
-            PopupMenu(requireContext(), anchor).apply {
-                // 통합 B의 Gravity.TOP 유지
-                gravity = Gravity.TOP
 
-                menu.add("챗봇").setOnMenuItemClickListener {
-                    val intent = Intent(requireActivity(), FieldChatActivity::class.java)
-                    startActivity(intent)
-                    true
-                }
+            val listPopupWindow = ListPopupWindow(requireContext(), null, android.R.attr.listPopupWindowStyle)
 
-                //  글 정리 기능 추가
-                menu.add("글 정리").setOnMenuItemClickListener {
-                    val fieldKey = fieldNameToKey[titleArg] ?: titleArg
-                    updateFieldViaServer(fieldKey, editTextContent.text.toString(), titleArg)
-                    true
+            // 메뉴 아이템 설정
+            val items = listOf("챗봇", "글 정리")
+            val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, items)
+            listPopupWindow.setAdapter(adapter)
+
+            // 앵커 뷰 설정 (팝업이 뜰 기준 뷰)
+            listPopupWindow.anchorView = anchor
+
+            // 팝업창의 너비 설정 (옵션)
+            listPopupWindow.setContentWidth(500) // 예시: 300px 또는 WRAP_CONTENT 등
+
+            // 메뉴 아이템 클릭 리스너 설정
+            listPopupWindow.setOnItemClickListener { _, _, position, _ ->
+                val selectedItem = items[position]
+                when (selectedItem) {
+                    "챗봇" -> {
+                        val intent = Intent(requireActivity(), FieldChatActivity::class.java)
+                        startActivity(intent)
+                    }
+                    "글 정리" -> {
+                        Toast.makeText(
+                            requireContext(),
+                            "$selectedItem 기능은 추후 추가됩니다.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
-                show()
+                listPopupWindow.dismiss() // 메뉴 선택 후 팝업 닫기
+            }
+
+            // 팝업 위치를 버튼 위로 조정
+            // ListPopupWindow는 기본적으로 앵커 뷰 아래에 표시됩니다.
+            // verticalOffset을 음수 값으로 설정하여 위로 올립니다.
+            // 정확히 버튼 위에 위치시키려면 (앵커 뷰 높이 + 팝업창 자체의 높이) 만큼 올려야 합니다.
+            anchor.post { // 앵커 뷰의 높이를 정확히 가져오기 위해 post 사용
+                // 팝업창 내용의 높이를 계산 (아이템 개수 * 아이템 당 예상 높이)
+                // 실제 아이템 뷰를 측정하는 것이 가장 정확하지만, 여기서는 간이 계산법을 사용합니다.
+                val density = requireContext().resources.displayMetrics.density
+                val estimatedItemHeight = (48 * density).toInt() // 일반적인 아이템 높이 48dp
+                val popupContentHeight = estimatedItemHeight * adapter.count
+
+                listPopupWindow.verticalOffset = -(anchor.height + popupContentHeight)
+                listPopupWindow.show()
+
             }
         }
 

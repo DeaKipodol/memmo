@@ -4,7 +4,8 @@
     android:id="@+id/mainLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:padding="16dp"
+    android:background="#ffffff">
 
     <ImageButton
         android:id="@+id/backButton"
