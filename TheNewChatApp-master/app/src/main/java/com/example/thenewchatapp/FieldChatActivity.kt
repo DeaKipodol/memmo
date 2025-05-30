@@ -745,19 +745,6 @@ class FieldChatActivity : AppCompatActivity() {
         return (dp * resources.displayMetrics.density).toInt()
     }
 
-//    private fun adjustInputAreaForEasyCommand(show: Boolean) {
-//        val params = inputArea.layoutParams as ViewGroup.MarginLayoutParams
-//        if (show) {
-//            val easyHeight = recyclerEasyCommand.height + recyclerCommandEntry.height + dpToPx(20)
-//            Log.d("AdjustInputArea", "recyclerEasyCommand.height = ${recyclerEasyCommand.height}, recyclerCommandEntry.height = ${recyclerCommandEntry.height}, easyHeight = $easyHeight")
-//            params.bottomMargin = easyHeight
-//        } else {
-//            params.bottomMargin = dpToPx(10)
-//            Log.d("AdjustInputArea", "Set bottomMargin to default ${dpToPx(10)}")
-//        }
-//        inputArea.layoutParams = params
-//        inputArea.requestLayout()
-//    }
 
     private fun adjustInputAreaForEasyCommand(show: Boolean) {
         val params = inputArea.layoutParams as ViewGroup.MarginLayoutParams
@@ -804,84 +791,6 @@ class FieldChatActivity : AppCompatActivity() {
 
     companion object {
         fun newInstance(): FieldChatActivity = FieldChatActivity()
-    }
-
-//    override fun onBackPressed() {
-//        if (recyclerEasyCommand.visibility == View.VISIBLE || recyclerCommandEntry.visibility == View.VISIBLE) {
-//            hideEasyCommandLists() // 뷰 숨기고 inputArea 조절
-//        } else if (fragmentContainer.visibility == View.VISIBLE) {
-//            supportFragmentManager.popBackStack()
-//            fragmentContainer.visibility = View.GONE
-//            chatContainer.visibility = View.VISIBLE
-//        } else {
-//            super.onBackPressed()
-//        }
-//    }
-
-    override fun onBackPressed() {
-        if (isEasyCommandVisible) {
-            hideEasyCommandLists()
-        } else if (fragmentContainer.visibility == View.VISIBLE) {
-            supportFragmentManager.popBackStack()
-            fragmentContainer.visibility = View.GONE
-            chatContainer.visibility = View.VISIBLE
-        } else {
-            super.onBackPressed()
-        }
-    }
-
-//    override fun onBackPressed() {
-//        if (fragmentContainer.visibility == View.VISIBLE) {
-//            supportFragmentManager.popBackStack()
-//            fragmentContainer.visibility = View.GONE
-//            chatContainer.visibility     = View.VISIBLE
-//
-//            recyclerEasyCommand.visibility = View.GONE
-//            recyclerCommandEntry.visibility = View.GONE
-//        } else {
-//            super.onBackPressed()
-//        }
-//    }
-
-//    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-//        if (ev.action == MotionEvent.ACTION_DOWN) {
-//            // ▶ 터치 위치 계산
-//            val x = ev.rawX.toInt()
-//            val y = ev.rawY.toInt()
-//            // EditText, 카테고리, 엔트리 영역 Rect
-//            val editRect = Rect().apply { messageEditText.getGlobalVisibleRect(this) }
-//            val catRect  = Rect().apply { recyclerCategory.getGlobalVisibleRect(this) }
-//            val entRect  = Rect().apply { recyclerEntry.getGlobalVisibleRect(this) }
-//            // 이 영역들 외부 클릭 시에만 포커스 해제
-//            if (!editRect.contains(x, y) && !catRect.contains(x, y) && !entRect.contains(x, y)) {
-//                currentFocus?.clearFocus()
-//                }
-//        }
-//        return super.dispatchTouchEvent(ev)
-//    }
-
-
-    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        if (ev.action == MotionEvent.ACTION_DOWN) {
-            val x = ev.rawX.toInt()
-            val y = ev.rawY.toInt()
-
-            val easyCmdRect = Rect().apply { recyclerEasyCommand.getGlobalVisibleRect(this) }
-            val cmdEntryRect = Rect().apply { recyclerCommandEntry.getGlobalVisibleRect(this) }
-            val plusBtnRect = Rect().apply { btnPlus.getGlobalVisibleRect(this) }
-
-            // 리스트 외 클릭 시 닫기
-            if ((recyclerEasyCommand.visibility == View.VISIBLE || recyclerCommandEntry.visibility == View.VISIBLE)
-                && !easyCmdRect.contains(x, y)
-                && !cmdEntryRect.contains(x, y)
-                && !plusBtnRect.contains(x, y)) {
-                recyclerEasyCommand.visibility = View.GONE
-                recyclerCommandEntry.visibility = View.GONE
-                adjustInputAreaForEasyCommand(false)
-                currentFocus?.clearFocus()
-            }
-        }
-        return super.dispatchTouchEvent(ev)
     }
 
 }
