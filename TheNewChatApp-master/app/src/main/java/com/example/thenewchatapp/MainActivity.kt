@@ -1,11 +1,11 @@
 /*
  * Project: TheNewChatApp
- * Version: 4.0.0
+ * Version: 4.0.1
  * Last updated: 2025-05-30 09:00
  * Author: SiHyeon Cheon
  *
  * [Description]
-8필드, 이지커맨드 통합
+8필드, 이지커맨드 통합, 제목 저장관련 수정
  */
 
 package com.example.thenewchatapp
@@ -50,7 +50,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        textViewContent = findViewById(R.id.textViewContent)
         titleEditText = findViewById(R.id.titleEditText)
         editText = findViewById(R.id.editText)
         backButton = findViewById(R.id.backButton)
@@ -83,19 +82,6 @@ class MainActivity : AppCompatActivity() {
         btnVoice = findViewById(R.id.btnVoice)
         btnPlus = findViewById(R.id.btnPlus)
         fragmentContainer = findViewById(R.id.fragmentContainer)
-
-        // ✅ 저장된 텍스트 불러오기 (같은 prefs 사용)
-        val savedText = prefs.getString("main_text", "")
-        textViewContent.setText(savedText)
-
-        textViewContent.setOnEditorActionListener { v, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_DONE) {
-                val input = v.text.toString()
-                textViewContent.append("\n$input")
-                v.setText("")
-                true
-            } else false
-        }
 
         btnPlus.setOnClickListener {
             PopupMenu(this, it).apply {
@@ -135,41 +121,50 @@ class MainActivity : AppCompatActivity() {
         val inputTitle = titleEditText.text.toString().trim()
         val currentTime = Date()
 
-        val saveFileName = when {
-            currentFileName != null -> currentFileName!!
+        // 이전 파일명 (현재 저장 중인 파일명)
+        val oldFileName = currentFileName
+
+        // 새 파일명 생성
+        val newFileName = when {
+            oldFileName != null -> {
+                // 제목이 변경되었으면 새 파일명 생성
+                val oldTitle = oldFileName.removeSuffix(customExtension)
+                if (inputTitle.isNotEmpty() && inputTitle != oldTitle) {
+                    "$inputTitle$customExtension"
+                } else {
+                    oldFileName
+                }
+            }
             inputTitle.isNotEmpty() -> inputTitle + customExtension
             else -> "텍스트 노트 " + SimpleDateFormat("MMdd_HHmmss", Locale.getDefault()).format(currentTime) + customExtension
         }
 
-        val file = File(filesDir, saveFileName)
+        // 파일 rename 처리 (기존 파일이 있고 이름이 변경되었으면)
+        if (oldFileName != null && oldFileName != newFileName) {
+            val oldFile = File(filesDir, oldFileName)
+            val newFile = File(filesDir, newFileName)
+
+            if (newFile.exists()) {
+                Toast.makeText(this, "같은 이름의 파일이 이미 존재합니다.", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val renamed = oldFile.renameTo(newFile)
+            if (!renamed) {
+                Toast.makeText(this, "파일명 변경에 실패했습니다.", Toast.LENGTH_SHORT).show()
+                return
+            }
+            currentFileName = newFileName
+        } else if (oldFileName == null) {
+            currentFileName = newFileName
+        }
+
+        // 내용 저장
+        val file = File(filesDir, currentFileName!!)
         file.writeText(content)
+
         Toast.makeText(this, "저장되었습니다", Toast.LENGTH_SHORT).show()
-
-        if (currentFileName == null) {
-            currentFileName = saveFileName
-        }
     }
 
-    override fun onPause() {
-        super.onPause()
-        prefs.edit().putString("main_text", textViewContent.text.toString()).apply()
-    }
 
-    override fun onResume() {
-        super.onResume()
-        val current = supportFragmentManager.findFragmentById(R.id.editText)
-        if (current == null) {
-            btnPlus.visibility = View.VISIBLE
-            btnVoice.visibility = View.VISIBLE
-            textViewContent.visibility = View.VISIBLE
-        }
-    }
-
-    fun restoreMainUI() {
-        textViewContent.visibility = View.VISIBLE
-        btnPlus.visibility = View.VISIBLE
-        btnVoice.visibility = View.VISIBLE
-
-        fragmentContainer.visibility = View.GONE
-    }
 }

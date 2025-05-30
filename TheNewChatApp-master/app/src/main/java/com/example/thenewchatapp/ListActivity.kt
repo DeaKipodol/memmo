@@ -5,6 +5,7 @@ package com.example.thenewchatapp
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.view.MotionEvent
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -59,9 +60,21 @@ class ListActivity : AppCompatActivity() {
         buttonDelete = findViewById(R.id.buttonDelete)
         btnThemeToggle = findViewById(R.id.btnThemeToggle)
 
+
+
+        recyclerView = findViewById(R.id.recyclerView)
+        recyclerView.layoutManager = GridLayoutManager(this, 2)
+
         val iconMenu = findViewById<ImageView>(R.id.icon_menu)
         val iconSearch = findViewById<ImageView>(R.id.icon_search)
         val iconMore = findViewById<ImageView>(R.id.icon_more)
+
+        val clearSelectionClickListener = View.OnClickListener {
+            clearSelectionAndHideBar()
+        }
+
+        val logoContainer = findViewById<View>(R.id.logoContainer)
+        val iconBar = findViewById<View>(R.id.iconBar)
 
         iconMenu.setOnClickListener {
             Toast.makeText(this, "햄버거 메뉴 클릭됨", Toast.LENGTH_SHORT).show()
@@ -122,7 +135,54 @@ class ListActivity : AppCompatActivity() {
             AppCompatDelegate.setDefaultNightMode(next)
             recreate()
         }
+
+
+        recyclerView.setOnTouchListener { v, event ->
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                val child = recyclerView.findChildViewUnder(event.x, event.y)
+                if (child == null && listAdapter.getSelectedItems().isNotEmpty()) {
+                    listAdapter.clearSelection()
+                    bottomBar.visibility = View.GONE
+                    createButton.visibility = View.VISIBLE
+                }
+            }
+            false
+        }
+
+
+        // RecyclerView 외부 영역 터치 시 선택 해제 처리
+        val rootLayout = findViewById<View>(android.R.id.content)
+        rootLayout.setOnTouchListener { v, event ->
+            // 선택 상태가 있으면 해제 및 하단 바 숨김
+            if (listAdapter.getSelectedItems().isNotEmpty()) {
+                listAdapter.clearSelection()
+                bottomBar.visibility = View.GONE
+                createButton.visibility = View.VISIBLE
+            }
+            false  // 이벤트 소비하지 않음, 다른 터치 이벤트는 정상 처리
+        }
+
+
+        logoContainer.setOnClickListener(clearSelectionClickListener)
+        iconBar.setOnClickListener(clearSelectionClickListener)
+        iconMenu.setOnClickListener(clearSelectionClickListener)
+        iconSearch.setOnClickListener(clearSelectionClickListener)
+        iconMore.setOnClickListener(clearSelectionClickListener)
+
+
+
+
+
     }
+
+    private fun clearSelectionAndHideBar() {
+        if (listAdapter.getSelectedItems().isNotEmpty()) {
+            listAdapter.clearSelection()
+            bottomBar.visibility = View.GONE
+            createButton.visibility = View.VISIBLE
+        }
+    }
+
 
     private fun toggleFabMenu() {
         if (isFabOpen) {
@@ -187,6 +247,24 @@ class ListActivity : AppCompatActivity() {
 
     private fun showRenameDialog(fileName: String) {
         val editText = EditText(this)
+
+        // 확장자 뗀 순수 제목 얻기
+        val pureTitle = fileName.removeSuffix(".mdocx")
+
+        // 자동제목 패턴 (예: "텍스트 노트 0512_154530")
+        val autoTitlePattern = Regex("""^텍스트 노트 \d{4}_\d{6}$""")
+
+        // 자동제목이면 빈 문자열, 아니면 기존 제목 세팅
+        val initialTitle = if (autoTitlePattern.matches(pureTitle)) {
+            ""  // 자동 제목일 때 빈 문자열 세팅
+        } else {
+            pureTitle
+        }
+
+
+
+        editText.setText(initialTitle)
+
         AlertDialog.Builder(this)
             .setTitle("제목 수정")
             .setView(editText)
@@ -202,6 +280,7 @@ class ListActivity : AppCompatActivity() {
             .setNegativeButton("취소", null)
             .show()
     }
+
 
     private fun showDeleteDialog(selected: List<String>) {
         AlertDialog.Builder(this)

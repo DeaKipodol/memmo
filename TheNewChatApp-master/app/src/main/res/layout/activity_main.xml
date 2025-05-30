@@ -99,9 +99,4 @@
         android:layout_height="match_parent"
         android:visibility="gone" />
 
-    <EditText
-        android:id="@+id/textViewContent"
-        android:layout_width="403dp"
-        android:layout_height="67dp" />
-
 </RelativeLayout>
