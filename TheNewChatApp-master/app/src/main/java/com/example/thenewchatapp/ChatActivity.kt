@@ -263,25 +263,32 @@ class ChatActivity : AppCompatActivity() {
 
             // 2) 실제 API 호출
             CoroutineScope(Dispatchers.IO).launch {
-                val serverUrl = "http://54.252.159.52:5000/generate-document"
-                val client = OkHttpClient()
-                val requestBody: RequestBody = "".toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
-                val request = Request.Builder()
-                    .url(serverUrl)
-                    .post(requestBody) // POST 요청
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(0, TimeUnit.SECONDS)  // 0은 무한대기. 일반적으로 권장되지 않음. 적절한 값으로 설정 필요 (예: 30)
+                    .readTimeout(0, TimeUnit.SECONDS)    // 0은 무한대기. 장시간 작업 시 사용 가능하나, UX 고려 필요.
+                    .writeTimeout(0, TimeUnit.SECONDS)   // 0은 무한대기. 일반적으로 권장되지 않음. 적절한 값으로 설정 필요 (예: 30)
                     .build()
+                val serverUrl = "http://54.252.159.52:5000/generate-document"
+
+                val requestBody: RequestBody = "".toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
+
+                // Request 객체 생성 추가
+                val request = Request.Builder()
+                    .url(serverUrl)       // serverUrl 사용
+                    .post(requestBody)    // requestBody 사용
+                    .build()
+
                 var resultText: String? = null
                 var requestSuccessful = false
                 var errorMessageText: String? = null
                 try {
-                    val response = client.newCall(request).execute() // 동기적 네트워크 호출 (IO 스레드에서 실행)
+                    // client.newCall에 request 변수 전달
+                    val response = client.newCall(request).execute()
 
                     if (response.isSuccessful) {
                         val responseBodyString = response.body?.string()
                         if (responseBodyString != null) {
                             try {
-                                // JSON 응답 파싱 (간단하게 JSONObject 사용)
-                                // 더 안정적이고 편리한 JSON 파싱을 위해 Gson 또는 Moshi 사용을 권장합니다.
                                 val jsonResponse = JSONObject(responseBodyString)
                                 requestSuccessful = jsonResponse.optBoolean("success", false)
 
@@ -291,10 +298,6 @@ class ChatActivity : AppCompatActivity() {
                                         "서버로부터 결과 텍스트를 받지 못했습니다."
                                     )
                                 } else {
-                                    // 서버에서 success: false를 반환한 경우
-                                    // 서버 코드에 따라 final_text에 오류 메시지가 올 수도 있고, 별도의 detail 필드에 올 수도 있습니다.
-                                    // 현재 서버는 success:false를 직접 반환하지 않고 HTTP 500 에러와 함께 detail을 보냅니다.
-                                    // 이 부분은 서버 응답 구조에 맞춰 조정이 필요할 수 있습니다.
                                     errorMessageText =
                                         jsonResponse.optString("detail", "서버에서 요청 처리에 실패했습니다.")
                                     if (errorMessageText.isNullOrEmpty()) {
@@ -305,29 +308,24 @@ class ChatActivity : AppCompatActivity() {
                                     }
                                 }
                             } catch (e: org.json.JSONException) {
-                                // JSON 파싱 실패
                                 requestSuccessful = false
                                 errorMessageText = "서버 응답을 처리하는 중 오류가 발생했습니다. (JSON 파싱 오류)"
                                 e.printStackTrace()
                             }
                         } else {
-                            // 응답 본문이 비어있는 경우
                             requestSuccessful = false
                             errorMessageText = "서버로부터 비어있는 응답을 받았습니다."
                         }
                     } else {
-                        // HTTP 에러 (예: 404, 500 등)
                         requestSuccessful = false
-                        val errorBodyString = response.body?.string() // 오류 응답 본문이 있을 수 있음
-                        var detailMessage = response.message // 기본적인 HTTP 상태 메시지
+                        val errorBodyString = response.body?.string()
+                        var detailMessage = response.message
 
                         if (!errorBodyString.isNullOrEmpty()) {
                             try {
-                                // FastAPI의 HTTPException은 {"detail": "오류 메시지"} 형식의 JSON을 반환할 수 있습니다.
                                 val errorJson = JSONObject(errorBodyString)
                                 detailMessage = errorJson.optString("detail", detailMessage)
                             } catch (e: org.json.JSONException) {
-                                // 오류 응답 본문이 JSON이 아닌 경우, 기존 detailMessage 사용
                                 e.printStackTrace()
                             }
                         }
@@ -335,29 +333,23 @@ class ChatActivity : AppCompatActivity() {
                             "결과 생성에 실패했습니다. (서버 오류: ${response.code} ${detailMessage})"
                     }
                 } catch (e: IOException) {
-                    // 네트워크 연결 오류, 타임아웃 등 I/O 예외
                     requestSuccessful = false
                     errorMessageText = "네트워크 연결 중 오류가 발생했습니다: ${e.localizedMessage}"
                     e.printStackTrace()
                 }
-                // 로딩 제거
+
                 withContext(Dispatchers.Main) {
-                    // 로딩 메시지 제거
                     val loadingIdx = chatMessages.indexOf(loading)
                     if (loadingIdx >= 0) {
                         chatMessages.removeAt(loadingIdx)
                         chatAdapter.notifyItemRemoved(loadingIdx)
                     }
 
-                    // 4) 결과 또는 에러 메시지를 채팅 UI에 추가
                     val messageToShow: ChatMessage
                     if (requestSuccessful && resultText != null) {
                         messageToShow = ChatMessage(resultText, MessageType.RECEIVED, isResult = true)
                     } else {
-                        // errorMessageText가 null인 경우를 대비해 기본 오류 메시지 설정
                         val finalErrorMessage = errorMessageText ?: "알 수 없는 오류로 인해 결과를 생성할 수 없습니다."
-                        // 에러 메시지도 결과 타입으로 표시 (isResult=true)하거나,
-                        // 별도의 에러 메시지 타입을 정의하여 사용할 수 있습니다.
                         messageToShow = ChatMessage(finalErrorMessage, MessageType.RECEIVED, isResult = true)
                     }
                     chatMessages.add(messageToShow)
