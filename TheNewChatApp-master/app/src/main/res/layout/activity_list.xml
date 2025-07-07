@@ -42,20 +42,20 @@
                 android:layout_centerHorizontal="true"
                 android:layout_below="@id/btnThemeToggle"
                 android:layout_marginTop="16dp"
-                android:src="@drawable/memmo_logo"
+                android:src="@drawable/memmo_logo_new"
                 android:contentDescription="memmo 로고" />
 
             <!-- 3) 로고 바로 아래에 앱 이름 -->
-            <TextView
-                android:id="@+id/appNameText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_below="@id/logoImage"
-                android:layout_centerHorizontal="true"
-                android:paddingTop="8dp"
-                android:text="작업 공간"
-                android:textColor="#333333"
-                android:textSize="30sp" />
+<!--            <TextView-->
+<!--                android:id="@+id/appNameText"-->
+<!--                android:layout_width="wrap_content"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:layout_below="@id/logoImage"-->
+<!--                android:layout_centerHorizontal="true"-->
+<!--                android:paddingTop="8dp"-->
+<!--                android:text="작업 공간"-->
+<!--                android:textColor="#333333"-->
+<!--                android:textSize="30sp" />-->
         </RelativeLayout>
 
         <!-- 아이콘 메뉴: 로고 아래 위치, 스크롤 시 상단 고정 -->
